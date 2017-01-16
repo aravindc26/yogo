@@ -497,3 +497,147 @@ func GetBorder(node *Node, edge Edge) (float64, error) {
 	}
 	return r.value, nil
 }
+
+func SetWidth(node *Node, width float64) {
+	if node.style.dimensions[DimensionWidth].value != width || node.style.dimensions[DimensionWidth].unit != UnitPixel {
+		node.style.dimensions[DimensionWidth].value = width
+		if !math.IsNaN(width) {
+			node.style.dimensions[DimensionWidth].unit = UnitPixel
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func SetWidthPercent(node *Node, width float64) {
+	if node.style.dimensions[DimensionWidth].value != width || node.style.dimensions[DimensionWidth].unit != UnitPercent {
+		node.style.dimensions[DimensionWidth].value = width
+		if !math.IsNaN(width) {
+			node.style.dimensions[DimensionWidth].unit = UnitPercent
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func GetWidth(node *Node) Value {
+	return node.style.dimensions[DimensionWidth]
+}
+
+func SetHeight(node *Node, height float64) {
+	if node.style.dimensions[DimensionHeight].value != height || node.style.dimensions[DimensionWidth].unit != UnitPixel {
+		node.style.dimensions[DimensionHeight].value = height
+		if !math.IsNaN(height) {
+			node.style.dimensions[DimensionHeight].unit = UnitPixel
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func SetHeightPercent(node *Node, height float64) {
+	if node.style.dimensions[DimensionHeight].value != height || node.style.dimensions[DimensionHeight].unit != UnitPercent {
+		node.style.dimensions[DimensionHeight].value = height
+		if !math.IsNaN(height) {
+			node.style.dimensions[DimensionHeight].unit = UnitPercent
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func GetHeight(node *Node) Value {
+	return node.style.dimensions[DimensionHeight]
+}
+
+func SetMinWidth(node *Node, minWidth float64) {
+	if node.style.minDimensions[DimensionWidth].value != minWidth || node.style.minDimensions[DimensionWidth].unit != UnitPixel {
+		node.style.minDimensions[DimensionWidth].value = minWidth
+		if !math.IsNaN(minWidth) {
+			node.style.minDimensions[DimensionWidth].unit = UnitPixel
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func SetMinWidthPercent(node *Node, minWidth float64) {
+	if node.style.minDimensions[DimensionWidth].value != minWidth || node.style.minDimensions[DimensionWidth].unit != UnitPercent {
+		node.style.minDimensions[DimensionWidth].value = minWidth
+		if !math.IsNaN(minWidth) {
+			node.style.minDimensions[DimensionWidth].unit = UnitPercent
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func GetMinWidth(node *Node) Value {
+	return node.style.minDimensions[DimensionWidth]
+}
+
+func SetMinHeight(node *Node, minHeight float64) {
+	if node.style.minDimensions[DimensionHeight].value != minHeight || node.style.minDimensions[DimensionHeight].unit != UnitPixel {
+		node.style.minDimensions[DimensionHeight].value = minHeight
+		if !math.IsNaN(minHeight) {
+			node.style.minDimensions[DimensionHeight].unit = UnitPixel
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func SetMinHeightPercent(node *Node, minHeight float64) {
+	if node.style.minDimensions[DimensionHeight].value != minHeight || node.style.minDimensions[DimensionHeight].unit != UnitPercent {
+		node.style.minDimensions[DimensionHeight].value = minHeight
+		if !math.IsNaN(minHeight) {
+			node.style.minDimensions[DimensionHeight].unit = UnitPercent
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func GetMinHeight(node *Node) Value {
+	return node.style.minDimensions[DimensionHeight]
+}
+
+func SetMaxWidth(node *Node, maxWidth float64) {
+	if node.style.maxDimensions[DimensionWidth].value != maxWidth || node.style.maxDimensions[DimensionWidth].unit != UnitPixel {
+		node.style.maxDimensions[DimensionWidth].value = maxWidth
+		if !math.IsNaN(maxWidth) {
+			node.style.maxDimensions[DimensionWidth].unit = UnitPixel
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func SetMaxWidthPercent(node *Node, maxWidth float64) {
+	if node.style.maxDimensions[DimensionWidth].value != maxWidth || node.style.maxDimensions[DimensionWidth].unit != UnitPercent {
+		node.style.maxDimensions[DimensionWidth].value = maxWidth
+		if !math.IsNaN(maxWidth) {
+			node.style.maxDimensions[DimensionWidth].unit = UnitPercent
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func GetMaxWidth(node *Node) Value {
+	return node.style.maxDimensions[DimensionWidth]
+}
+
+func SetMaxHeight(node *Node, maxHeight float64) {
+	if node.style.maxDimensions[DimensionHeight].value != maxHeight || node.style.maxDimensions[DimensionHeight].unit != UnitPixel {
+		node.style.maxDimensions[DimensionHeight].value = maxHeight
+		if !math.IsNaN(maxHeight) {
+			node.style.maxDimensions[DimensionHeight].unit = UnitPixel
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func SetMaxHeightPercent(node *Node, maxHeight float64) {
+	if node.style.maxDimensions[DimensionHeight].value != maxHeight || node.style.maxDimensions[DimensionHeight].unit != UnitPercent {
+		node.style.maxDimensions[DimensionHeight].value = maxHeight
+		if !math.IsNaN(maxHeight) {
+			node.style.maxDimensions[DimensionHeight].unit = UnitPercent
+		}
+		MarkDirtyInternal(node)
+	}
+}
+
+func GetMaxHeight(node *Node) Value {
+	return node.style.maxDimensions[DimensionHeight]
+}

@@ -89,3 +89,10 @@ const (
 	EdgeVertical
 	EdgeAll
 )
+
+type Dimension int
+
+const (
+	DimensionWidth Dimension = iota
+	DimensionHeight
+)
