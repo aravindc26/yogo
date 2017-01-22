@@ -2,6 +2,7 @@ package yoga
 
 import (
 	"errors"
+	"log"
 	"math"
 )
 
@@ -27,6 +28,7 @@ type CachedMeasurement struct {
 type Layout struct {
 	position                    [4]float64
 	dimensions                  [2]float64
+	margin                      [6]float64
 	padding                     [6]float64
 	direction                   Direction
 	computedFlexBasisGeneration uint32
@@ -518,7 +520,7 @@ func SetWidthPercent(node *Node, width float64) {
 	}
 }
 
-func GetWidth(node *Node) Value {
+func GetStyleWidth(node *Node) Value {
 	return node.style.dimensions[DimensionWidth]
 }
 
@@ -640,4 +642,386 @@ func SetMaxHeightPercent(node *Node, maxHeight float64) {
 
 func GetMaxHeight(node *Node) Value {
 	return node.style.maxDimensions[DimensionHeight]
+}
+
+func SetAspectRatio(node *Node, aspectRatio float64) {
+	if node.style.aspectRatio != aspectRatio {
+		node.style.aspectRatio = aspectRatio
+		MarkDirtyInternal(node)
+	}
+}
+
+func GetLayoutAspectRatio(node *Node) float64 {
+	return node.style.aspectRatio
+}
+
+func GetLayoutLeft(node *Node) float64 {
+	return node.layout.position[EdgeLeft]
+}
+
+func GetLayoutTop(node *Node) float64 {
+	return node.layout.position[EdgeTop]
+}
+
+func GetLayoutRight(node *Node) float64 {
+	return node.layout.position[EdgeRight]
+}
+
+func GetLayoutBottom(node *Node) float64 {
+	return node.layout.position[EdgeBottom]
+}
+
+func GetLayoutWidth(node *Node) float64 {
+	return node.layout.dimensions[DimensionWidth]
+}
+
+func GetLayoutHeight(node *Node) float64 {
+	return node.layout.dimensions[DimensionHeight]
+}
+
+func GetLayoutDirection(node *Node) Direction {
+	return node.layout.direction
+}
+
+func GetLayoutMargin(node *Node, edge Edge) (float64, error) {
+	if !(edge <= EdgeEnd) {
+		return 0.0, errors.New("Cannot get layout properties of multi-edge shorthands")
+	}
+	if edge == EdgeLeft {
+		if node.layout.direction == DirectionRTL {
+			return node.layout.margin[EdgeEnd], nil
+		} else {
+			return node.layout.margin[EdgeStart], nil
+		}
+	}
+	if edge == EdgeRight {
+		if node.layout.direction == DirectionRTL {
+			return node.layout.margin[EdgeStart], nil
+		} else {
+			return node.layout.margin[EdgeEnd], nil
+		}
+	}
+	return node.layout.margin[edge], nil
+}
+
+func GetLayoutPadding(node *Node, edge Edge) (float64, error) {
+	if !(edge <= EdgeEnd) {
+		return 0.0, errors.New("Cannot get layout properties of multi-edge shorthands")
+	}
+	if edge == EdgeLeft {
+		if node.layout.direction == DirectionRTL {
+			return node.layout.padding[EdgeEnd], nil
+		} else {
+			return node.layout.padding[EdgeStart], nil
+		}
+	}
+	if edge == EdgeRight {
+		if node.layout.direction == DirectionRTL {
+			return node.layout.padding[EdgeStart], nil
+		} else {
+			return node.layout.padding[EdgeEnd], nil
+		}
+	}
+	return node.layout.padding[edge], nil
+}
+
+var currentGenerationCount uint32
+
+func ValueEqual(a Value, b Value) bool {
+	if a.unit != b.unit {
+		return false
+	}
+	if a.unit == UnitUndefined {
+		return true
+	}
+	return math.Abs(a.value-b.value) < 0.0001
+}
+
+func FloatsEqual(a, b float64) bool {
+	if math.IsNaN(a) {
+		return math.IsNaN(b)
+	}
+	return math.Abs(a-b) < 0.0001
+}
+
+func Indent(n int) {
+	for i := 0; i < n; i++ {
+		log.Println("  ")
+	}
+}
+
+func PrintNumberIfNotZero(str string, number *Value) {
+	if !FloatsEqual(number.value, 0) {
+		log.Printf("%s: %g%s, ", str, number.value, number.unit)
+	}
+}
+
+func PrintNumberIfNotUndefinedf(str string, number float64) {
+	if !math.IsNaN(number) {
+		log.Printf("%s: %g, ", str, number)
+	}
+}
+
+func PrintNumberIfNotUndefined(str string, number *Value) {
+	if number.unit != UnitUndefined {
+		log.Printf("%s: %g%s, ", str, number.value, number.unit)
+	}
+}
+
+func FourValuesEqual(four [4]Value) bool {
+	return ValueEqual(four[0], four[1]) && ValueEqual(four[0], four[2]) && ValueEqual(four[0], four[3])
+}
+
+func NodePrintInternal(node *Node, options PrintOptions, level int) error {
+	Indent(level)
+	log.Print("{")
+	if node.print != nil {
+		node.print(node)
+	}
+	if options&PrintOptionsLayout != 0 {
+		log.Print("layout: {")
+		log.Print("width: %g, ", node.layout.dimensions[DimensionWidth])
+		log.Print("height: %g, ", node.layout.dimensions[DimensionHeight])
+		log.Print("top: %g, ", node.layout.position[EdgeTop])
+		log.Print("left: %g", node.layout.position[EdgeLeft])
+		log.Print("}, ")
+	}
+
+	if options&PrintOptionsStyle != 0 {
+		log.Printf("flexDirection: '%s', ", node.style.flexDirection)
+		log.Printf("justifyContent: '%s', ", node.style.justifyContent)
+		log.Printf("alignItems: '%s', ", node.style.alignItems)
+		log.Printf("alignContent: '%s', ", node.style.alignContent)
+		log.Printf("alignSelf: '%s', ", node.style.alignSelf)
+		PrintNumberIfNotUndefinedf("flexGrow", GetFlexGrow(node))
+		PrintNumberIfNotUndefinedf("flexShrink", GetFlexShrink(node))
+		PrintNumberIfNotUndefined("flexBasis", GetFlexBasisPtr(node))
+		log.Printf("overflow: '%s', ", node.style.overflow)
+		var fourVal [4]Value
+		for i := 0; i < 4; i++ {
+			fourVal[i] = node.style.margin[i]
+		}
+		if FourValuesEqual(fourVal) {
+			val, err := ComputedEdgeValue(node.style.margin, EdgeLeft, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("margin", val)
+		} else {
+			val, err := ComputedEdgeValue(node.style.margin, EdgeLeft, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("marginLeft", val)
+			val, err = ComputedEdgeValue(node.style.margin, EdgeRight, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("marginRight", val)
+			val, err = ComputedEdgeValue(node.style.margin, EdgeTop, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("marginTop", val)
+			val, err = ComputedEdgeValue(node.style.margin, EdgeBottom, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("marginBottom", val)
+			val, err = ComputedEdgeValue(node.style.margin, EdgeStart, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("marginStart", val)
+			val, err = ComputedEdgeValue(node.style.margin, EdgeEnd, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("marginEnd", val)
+		}
+		for i := 0; i < 4; i++ {
+			fourVal[i] = node.style.border[i]
+		}
+		if FourValuesEqual(fourVal) {
+			val, err := ComputedEdgeValue(node.style.border, EdgeLeft, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("borderWidth", val)
+		} else {
+			val, err := ComputedEdgeValue(node.style.border, EdgeLeft, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("borderLeftWidth", val)
+			val, err = ComputedEdgeValue(node.style.border, EdgeRight, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("borderRightWidth", val)
+			val, err = ComputedEdgeValue(node.style.border, EdgeTop, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("borderTopWidth", val)
+			val, err = ComputedEdgeValue(node.style.border, EdgeBottom, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("borderBottomWidth", val)
+			val, err = ComputedEdgeValue(node.style.border, EdgeStart, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("borderStartWidth", val)
+			val, err = ComputedEdgeValue(node.style.border, EdgeEnd, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("borderEndWidth", val)
+		}
+		for i := 0; i < 4; i++ {
+			fourVal[i] = node.style.padding[i]
+		}
+		if FourValuesEqual(fourVal) {
+			val, err := ComputedEdgeValue(node.style.padding, EdgeLeft, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("padding", val)
+		} else {
+			val, err := ComputedEdgeValue(node.style.padding, EdgeLeft, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("paddingLeft", val)
+			val, err = ComputedEdgeValue(node.style.padding, EdgeRight, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("paddingRight", val)
+			val, err = ComputedEdgeValue(node.style.padding, EdgeTop, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("paddingTop", val)
+			val, err = ComputedEdgeValue(node.style.padding, EdgeBottom, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("paddingBottom", val)
+			val, err = ComputedEdgeValue(node.style.padding, EdgeStart, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("paddingStart", val)
+			val, err = ComputedEdgeValue(node.style.padding, EdgeEnd, &Value{value: 0, unit: UnitPixel})
+			if err != nil {
+				return err
+			}
+			PrintNumberIfNotZero("paddingEnd", val)
+		}
+		PrintNumberIfNotUndefined("width", &node.style.dimensions[DimensionWidth])
+		PrintNumberIfNotUndefined("height", &node.style.dimensions[DimensionHeight])
+		PrintNumberIfNotUndefined("maxWidth", &node.style.maxDimensions[DimensionWidth])
+		PrintNumberIfNotUndefined("maxHeigth", &node.style.maxDimensions[DimensionHeight])
+		PrintNumberIfNotUndefined("minWidth", &node.style.minDimensions[DimensionWidth])
+		PrintNumberIfNotUndefined("minHeight", &node.style.minDimensions[DimensionHeight])
+		log.Printf("position: '%s', ", node.style.positionType)
+		val, err := ComputedEdgeValue(node.style.position, EdgeLeft, &Value{value: math.NaN(), unit: UnitUndefined})
+		if err != nil {
+			return err
+		}
+		PrintNumberIfNotUndefined("left", val)
+		val, err = ComputedEdgeValue(node.style.position, EdgeRight, &Value{value: math.NaN(), unit: UnitUndefined})
+		if err != nil {
+			return err
+		}
+		PrintNumberIfNotUndefined("right", val)
+		val, err = ComputedEdgeValue(node.style.position, EdgeTop, &Value{value: math.NaN(), unit: UnitUndefined})
+		if err != nil {
+			return err
+		}
+		PrintNumberIfNotUndefined("top", val)
+		val, err = ComputedEdgeValue(node.style.position, EdgeBottom, &Value{value: math.NaN(), unit: UnitUndefined})
+		if err != nil {
+			return err
+		}
+		PrintNumberIfNotUndefined("bottom", val)
+
+	}
+	childCount := len(node.children)
+	if (options&PrintOptionsChildren != 0) && childCount > 0 {
+		log.Print("children: [\n")
+		for i := 0; i < childCount; i++ {
+			err := NodePrintInternal(GetChild(node, i), options, level+1)
+			if err != nil {
+				return err
+			}
+		}
+		Indent(level)
+		log.Print("]},\n")
+	} else {
+		log.Print("]},\n")
+	}
+	return nil
+}
+
+func NodePrint(node *Node, options PrintOptions) error {
+	return NodePrintInternal(node, options, 0)
+}
+
+var leading [4]Edge
+
+func init() {
+	leading[FlexDirectionColumn] = EdgeTop
+	leading[FlexDirectionColumnReverse] = EdgeBottom
+	leading[FlexDirectionRow] = EdgeLeft
+	leading[FlexDirectionRowReverse] = EdgeRight
+}
+
+var trailing [4]Edge
+
+func init() {
+	trailing[FlexDirectionColumn] = EdgeBottom
+	trailing[FlexDirectionColumnReverse] = EdgeTop
+	trailing[FlexDirectionRow] = EdgeRight
+	trailing[FlexDirectionRowReverse] = EdgeLeft
+}
+
+var pos [4]Edge
+
+func init() {
+	pos[FlexDirectionColumn] = EdgeTop
+	pos[FlexDirectionColumnReverse] = EdgeBottom
+	pos[FlexDirectionRow] = EdgeLeft
+	pos[FlexDirectionRowReverse] = EdgeRight
+}
+
+var dim [4]Dimension
+
+func init() {
+	dim[FlexDirectionColumn] = DimensionHeight
+	dim[FlexDirectionColumnReverse] = DimensionHeight
+	dim[FlexDirectionRow] = DimensionWidth
+	dim[FlexDirectionRowReverse] = DimensionWidth
+}
+
+func FlexDirectionIsRow(direction FlexDirection) bool {
+	return direction == FlexDirectionRow || direction == FlexDirectionRowReverse
+}
+
+func FlexDirectionIsColumn(direction FlexDirection) bool {
+	return direction == FlexDirectionColumn || direction == FlexDirectionColumnReverse
+}
+
+func LeadingMargin(node *Node, axis FlexDirection, widthSize float64) (float64, error) {
+	if FlexDirectionIsRow(axis) && node.style.margin[EdgeStart].unit != UnitUndefined {
+		return ValueResolve(&node.style.margin[EdgeStart], widthSize), nil
+	}
+	val, err := ComputedEdgeValue(node.style.margin, leading[axis], &Value{value: 0, unit: UnitUndefined})
+	if err != nil {
+		return 0, err
+	}
+	return ValueResolve(val, widthSize), nil
 }
